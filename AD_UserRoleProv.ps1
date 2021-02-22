@@ -1,6 +1,26 @@
 ﻿#requires -modules ActiveDirectory
 param ($Scope)
 
+<#
+.SYNOPSIS
+  Automatically launch a Citrix published resource
+.DESCRIPTION
+  This script provides a GUI to quickly clean an existing AD group from disabled user accounts, optionally recursive
+.PARAMETER PublishedApp
+  Name of the Citrix published resource
+.INPUTS
+  Name of Citrix published resource
+.OUTPUTS
+  None
+.NOTES
+  Version:        1.0
+  Author:         Bart Jacobs - @Cloudsparkle
+  Creation Date:  16/02/2021
+  Purpose/Change: Automatically launch a Citrix published resource
+ .EXAMPLE
+  None
+#>
+
 Add-Type -AssemblyName PresentationFramework
 
 if (($scope -ne "QV") -and ($scope -ne "CTX"))
@@ -38,6 +58,7 @@ if ($scope -eq "QV")
     
     $Menu1 = "Add user to role"
     $Menu2 = "Remove user from role"
+    $Menu3 = "List users for role"
     $TitleSelectGroup = "Select the the role"
     $TitleRemoveUser = "Select the user to be removed from role"
     $TitleAddUser = "Select the user to be added to role"
@@ -49,6 +70,7 @@ if ($scope -eq "CTX")
     
     $Menu1 = "Add user to Citrix Published Resource"
     $Menu2 = "Remove user from Citrix Published Resource"
+    $Menu3 = "List users for Citrix Published Resource"
     $TitleSelectGroup = "Select the the Citrix Published Resource"
     $TitleRemoveUser = "Select the user to be removed from Citrix Published Resource"
     $TitleAddUser = "Select the user to be added to Citrix Published Resource"
@@ -58,6 +80,7 @@ $Menu = [ordered]@{
 
   1 = $Menu1
   2 = $Menu2
+  3 = $Menu3
   }
 
 $Result = $Menu | Out-GridView -Title 'Make a  selection' -OutputMode Single
