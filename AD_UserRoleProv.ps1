@@ -54,26 +54,32 @@ $dc = Get-ADDomainController -DomainName $SelectedDomain.Forest -Discover -NextC
 if ($scope -eq "QV")
 {
    
-    $ADGroups = Get-ADGroup -Properties samaccountname, info, description -Filter '*' -SearchBase $QVBaseOU 
+    $ADGroups = Get-ADGroup -Properties samaccountname, description -Filter '*' -SearchBase $QVBaseOU | sort description
     
-    $Menu1 = "Add user to role"
-    $Menu2 = "Remove user from role"
-    $Menu3 = "List users for role"
-    $TitleSelectGroup = "Select the the role"
-    $TitleRemoveUser = "Select the user to be removed from role"
-    $TitleAddUser = "Select the user to be added to role"
+    $Menu1 = "Add user to QlikView role"
+    $Menu2 = "Remove user from QlikView role"
+    $Menu3 = "List users for QlikView role"
+    $TitleSelectGroup = "Select the the QlikView role:"
+    $TitleRemoveUser = "Select the user to be removed from QlikView role "
+    $TitleListUser = "Users for QlikView role "
+    $TitleAddUser = "Select the user to be added to QlikView role "
+    $TextAddUser = " has been added to the selected role "
+    $TextRemoveUser = " has been removed from the selected role "
 }
 
 if ($scope -eq "CTX")
 {
-   $ADGroups = Get-ADGroup -Properties samaccountname, info, description -Filter '*' -SearchBase $CTXBaseOU 
+   $ADGroups = Get-ADGroup -Properties samaccountname, description -Filter '*' -SearchBase $CTXBaseOU  | sort description
     
     $Menu1 = "Add user to Citrix Published Resource"
     $Menu2 = "Remove user from Citrix Published Resource"
     $Menu3 = "List users for Citrix Published Resource"
-    $TitleSelectGroup = "Select the the Citrix Published Resource"
-    $TitleRemoveUser = "Select the user to be removed from Citrix Published Resource"
-    $TitleAddUser = "Select the user to be added to Citrix Published Resource"
+    $TitleSelectGroup = "Select the the Citrix Published Resource:"
+    $TitleRemoveUser = "Select the user to be removed from Citrix Published Resource "
+    $TitleAddUser = "Select the user to be added to Citrix Published Resource "
+    $TitleListUser = "Users for Citrix Published Resource "
+    $TextAddUser = " has been added to the selected Citrix Published Resource "
+    $TextRemoveUser = " has been removed from the Citrix Published Resource "
 }
 
 $Menu = [ordered]@{
@@ -94,7 +100,7 @@ $Result = $Menu | Out-GridView -Title 'Make a  selection' -OutputMode Single
         {
             exit 0
         }
-        $SelectedUser = $ADusers | Out-GridView -Title $TitleAddUser -OutputMode Single
+        $SelectedUser = $ADusers | Out-GridView -Title ($TitleAddUser + $SelectedGroup.description) -OutputMode Single
         if ($SelectedUser -eq $null)
         {
             exit 0
@@ -118,6 +124,17 @@ $Result = $Menu | Out-GridView -Title 'Make a  selection' -OutputMode Single
         Else
         {
             Add-ADGroupMember -Identity $SelectedGroup.name -Members $Selecteduser.SamAccountName
+            $msgBoxText = $SelectedUser.name + $TextAddUser + $SelectedGroup.description
+            $msgBoxInput =  [System.Windows.MessageBox]::Show($msgBoxText,"User added","OK","Information")
+
+            switch  ($msgBoxInput) {
+
+            "OK" {
+
+                    Exit 1 
+
+                    }
+             }
         }
     }
 
@@ -128,13 +145,37 @@ $Result = $Menu | Out-GridView -Title 'Make a  selection' -OutputMode Single
         {
             exit 0
         }
-    $SelectedUser = Get-ADGroupMember -Identity $SelectedGroup.name | select Name, SamAccountName | Out-GridView -Title $TitleRemoveUser -OutputMode Single
+    $SelectedUser = Get-ADGroupMember -Identity $SelectedGroup.name | select Name, SamAccountName | Sort Name | Out-GridView -Title ($TitleRemoveUser + $SelectedGroup.description) -OutputMode Single
     if ($SelectedUser -eq $null)
         {
             exit 0
         }
+        $msgBoxText = $SelectedUser.name + $TextRemoveUser + $SelectedGroup.description
+            $msgBoxInput =  [System.Windows.MessageBox]::Show($msgBoxText,"User removed","OK","Information")
+
+            switch  ($msgBoxInput) {
+
+            "OK" {
+
+                    Exit 1 
+
+                    }
+             }
     Remove-ADGroupMember -Identity $SelectedGroup.name -Members $SelectedUser.samaccountname -Confirm:$False
     }
 
+{$Result.Name -eq 3} 
+  {
+    $SelectedGroup = $ADGroups| select description, name | Out-GridView -Title $TitleSelectGroup -OutputMode Single
+    if ($SelectedGroup -eq $null)
+        {
+            exit 0
+        }
+    $SelectedUser = Get-ADGroupMember -Identity $SelectedGroup.name | select Name, SamAccountName | sort Name | Out-GridView -Title ($TitleListUser + $SelectedGroup.description) -OutputMode Single
+    exit 0     
+
+            
+    
+    }
   
 } 
