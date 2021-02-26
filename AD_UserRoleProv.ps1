@@ -3,24 +3,25 @@ param ($Scope)
 
 <#
 .SYNOPSIS
-  Automatically launch a Citrix published resource
+  Provisioning script for QlikView and Citrix resources
 .DESCRIPTION
-  This script provides a GUI to quickly clean an existing AD group from disabled user accounts, optionally recursive
-.PARAMETER PublishedApp
-  Name of the Citrix published resource
+  This script provides a tool to use AD groups to provision Qlikview Roles and Citrix published resources
+.PARAMETER Scope
+  Qlikview or Citrix
 .INPUTS
-  Name of Citrix published resource
+  None
 .OUTPUTS
   None
 .NOTES
   Version:        1.0
   Author:         Bart Jacobs - @Cloudsparkle
-  Creation Date:  16/02/2021
-  Purpose/Change: Automatically launch a Citrix published resource
+  Creation Date:  26/02/2021
+  Purpose/Change: Qlikview/Citrix provisioning
  .EXAMPLE
   None
 #>
 
+# Get ready for the GUI stuff
 Add-Type -AssemblyName PresentationFramework
 
 if (($scope -ne "QV") -and ($scope -ne "CTX"))
