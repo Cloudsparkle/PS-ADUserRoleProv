@@ -21,12 +21,137 @@ param ($Scope)
   None
 #>
 
+# Function to read config.ini
+Function Get-IniContent
+{
+    <#
+    .Synopsis
+        Gets the content of an INI file
+    .Description
+        Gets the content of an INI file and returns it as a hashtable
+    .Notes
+        Author        : Oliver Lipkau <oliver@lipkau.net>
+        Blog        : http://oliver.lipkau.net/blog/
+        Source        : https://github.com/lipkau/PsIni
+                      http://gallery.technet.microsoft.com/scriptcenter/ea40c1ef-c856-434b-b8fb-ebd7a76e8d91
+        Version        : 1.0 - 2010/03/12 - Initial release
+                      1.1 - 2014/12/11 - Typo (Thx SLDR)
+                                         Typo (Thx Dave Stiff)
+        #Requires -Version 2.0
+    .Inputs
+        System.String
+    .Outputs
+        System.Collections.Hashtable
+    .Parameter FilePath
+        Specifies the path to the input file.
+    .Example
+        $FileContent = Get-IniContent "C:\myinifile.ini"
+        -----------
+        Description
+        Saves the content of the c:\myinifile.ini in a hashtable called $FileContent
+    .Example
+        $inifilepath | $FileContent = Get-IniContent
+        -----------
+        Description
+        Gets the content of the ini file passed through the pipe into a hashtable called $FileContent
+    .Example
+        C:\PS>$FileContent = Get-IniContent "c:\settings.ini"
+        C:\PS>$FileContent["Section"]["Key"]
+        -----------
+        Description
+        Returns the key "Key" of the section "Section" from the C:\settings.ini file
+    .Link
+        Out-IniFile
+    #>
+
+    [CmdletBinding()]
+    Param(
+        [ValidateNotNullOrEmpty()]
+        [ValidateScript({(Test-Path $_) -and ((Get-Item $_).Extension -eq ".ini")})]
+        [Parameter(ValueFromPipeline=$True,Mandatory=$True)]
+        [string]$FilePath
+    )
+
+    Begin
+        {Write-Verbose "$($MyInvocation.MyCommand.Name):: Function started"}
+
+    Process
+    {
+        Write-Verbose "$($MyInvocation.MyCommand.Name):: Processing file: $Filepath"
+
+        $ini = @{}
+        switch -regex -file $FilePath
+        {
+            "^\[(.+)\]$" # Section
+            {
+                $section = $matches[1]
+                $ini[$section] = @{}
+                $CommentCount = 0
+            }
+            "^(;.*)$" # Comment
+            {
+                if (!($section))
+                {
+                    $section = "No-Section"
+                    $ini[$section] = @{}
+                }
+                $value = $matches[1]
+                $CommentCount = $CommentCount + 1
+                $name = "Comment" + $CommentCount
+                $ini[$section][$name] = $value
+            }
+            "(.+?)\s*=\s*(.*)" # Key
+            {
+                if (!($section))
+                {
+                    $section = "No-Section"
+                    $ini[$section] = @{}
+                }
+                $name,$value = $matches[1..2]
+                $ini[$section][$name] = $value
+            }
+        }
+        Write-Verbose "$($MyInvocation.MyCommand.Name):: Finished Processing file: $FilePath"
+        Return $ini
+    }
+
+    End
+        {Write-Verbose "$($MyInvocation.MyCommand.Name):: Function ended"}
+}
+
 # Get ready for the GUI stuff
 Add-Type -AssemblyName PresentationFramework
 
+# Check for valid scope parameter
 if (($scope -ne "QV") -and ($scope -ne "CTX"))
 {
   $msgBoxInput =  [System.Windows.MessageBox]::Show("Scope parameter missing or invalid.","Error","OK","Error")
+  switch  ($msgBoxInput)
+  {
+    "OK"
+    {
+      Exit 1
+    }
+  }
+}
+
+# Get the current running directory
+$currentDir = [System.AppDomain]::CurrentDomain.BaseDirectory.TrimEnd('\')
+if ($currentDir -eq $PSHOME.TrimEnd('\'))
+{
+  $currentDir = $PSScriptRoot
+}
+
+# Read config.ini
+$IniFilePath = $currentDir + "\config.ini"
+$IniFileExists = Test-Path $IniFilePath
+If ($IniFileExists -eq $true)
+{
+  $IniFile = Get-IniContent $IniFilePath
+}
+Else
+{
+  $msgBoxInput = [System.Windows.MessageBox]::Show("Config.ini not found.","Error","OK","Error")
   switch  ($msgBoxInput)
   {
     "OK"
@@ -41,14 +166,41 @@ $SelectedGroup=""
 $SelectedUser=""
 $ADGroups=""
 
-# Set the base OU to search for groups
-$QVBaseOU = "OU=Qlikview,OU=Security Groups,OU=Nitto Europe NV,DC=nittoeurope,DC=com"
-$CTXBaseOU = "OU=CTX,OU=Groups,OU=Fujitsu,DC=nittoeurope,DC=com"
 # Get all AD users loaded in the beginning, so there is no delay further down
 $ADusers = get-aduser -filter *  | select name, samaccountname | sort name
 
 if ($scope -eq "QV")
 {
+  # Read the OU containing AD groups for Qlikview Role Groups
+  $QVBaseOU = $IniFile["AD"]["QVBaseOU"]
+  if ($QVBaseOU -eq $null)
+  {
+    $msgBoxInput = [System.Windows.MessageBox]::Show("OU for Qlikview Role Groups not found in config.ini.","Error","OK","Error")
+    switch  ($msgBoxInput)
+    {
+      "OK"
+      {
+        Exit 1
+      }
+    }
+  }
+  Else
+  {
+    # Test if OU exists
+    $QVBaseOUExists = Get-ADOrganizationalUnit -Filter "distinguishedName -eq '$QVBaseOU'"
+    if ($QVBaseOUExists -eq $null)
+    {
+        $msgBoxInput = [System.Windows.MessageBox]::Show("OU for Qlikview Role Groups not found in AD. Check config.ini.","Error","OK","Error")
+        switch  ($msgBoxInput)
+        {
+            "OK"
+            {
+            Exit 1
+            }
+        }
+    }      
+  }
+  
   # Get the groups for this Scope
   $ADGroups = Get-ADGroup -Properties samaccountname, description -Filter '*' -SearchBase $QVBaseOU | sort description
 
@@ -66,6 +218,36 @@ if ($scope -eq "QV")
 
 if ($scope -eq "CTX")
 {
+  # Read the OU containing AD groups for Citrix Published resources
+  $CTXBaseOU = $IniFile["AD"]["CTXBaseOU"]
+  if ($CTXBaseOU -eq $null)
+  {
+    $msgBoxInput = [System.Windows.MessageBox]::Show("OU for Citrix Published Resources not found in config.ini.","Error","OK","Error")
+    switch  ($msgBoxInput)
+    {
+      "OK"
+      {
+        Exit 1
+      }
+    }
+  }
+  Else
+  {
+    # Test if OU exists
+    $CTXBaseOUExists = Get-ADOrganizationalUnit -Filter "distinguishedName -eq '$CTXBaseOU'"
+    if ($CTXBaseOUExists -eq $null)
+    {
+        $msgBoxInput = [System.Windows.MessageBox]::Show("OU for Citrix Published Resources not found in AD. Check config.ini.","Error","OK","Error")
+        switch  ($msgBoxInput)
+        {
+            "OK"
+            {
+            Exit 1
+            }
+        }
+    }      
+  }
+  
   # Get the groups for this Scope
   $ADGroups = Get-ADGroup -Properties samaccountname, description -Filter '*' -SearchBase $CTXBaseOU  | sort description
 
