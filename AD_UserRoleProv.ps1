@@ -214,8 +214,8 @@ if ($scope -eq "QV")
   $TitleRemoveUser = "Select the user to be removed from QlikView Role "
   $TitleListUser = "Users for QlikView Role "
   $TitleAddUser = "Select the user to be added to QlikView Role "
-  $TextAddUser = " has been added to the selected Qlikview Role "
-  $TextRemoveUser = " has been removed from the selected Qlikview Role "
+  $TextAddUser = " has been added to the selected Qlikview Role: "
+  $TextRemoveUser = " has been removed from the selected Qlikview Role: "
 }
 
 if ($scope -eq "CTX")
@@ -261,8 +261,8 @@ if ($scope -eq "CTX")
     $TitleRemoveUser = "Select the user to be removed from Citrix Published Resource "
     $TitleAddUser = "Select the user to be added to Citrix Published Resource "
     $TitleListUser = "Users for Citrix Published Resource "
-    $TextAddUser = " has been added to the selected Citrix Published Resource "
-    $TextRemoveUser = " has been removed from the Citrix Published Resource "
+    $TextAddUser = " has been added to the selected Citrix Published Resource: "
+    $TextRemoveUser = " has been removed from the Citrix Published Resource: "
 }
 
 # Create the basic menu
