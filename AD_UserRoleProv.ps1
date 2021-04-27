@@ -5,7 +5,7 @@ param ($Scope)
 .SYNOPSIS
   Provisioning script for QlikView and Citrix resources
 .DESCRIPTION
-  This script provides a tool to use AD groups to provision Qlikview Roles and Citrix published resources
+  This script provides a tool to use AD groups to provision Qlikview Roles and Citrix Published Resources
 .PARAMETER Scope
   Qlikview or Citrix
 .INPUTS
@@ -15,7 +15,7 @@ param ($Scope)
 .NOTES
   Version:        1.0
   Author:         Bart Jacobs - @Cloudsparkle
-  Creation Date:  26/02/2021
+  Creation Date:  27/04/2021
   Purpose/Change: Qlikview/Citrix provisioning
  .EXAMPLE
   None
@@ -205,15 +205,15 @@ if ($scope -eq "QV")
   $ADGroups = Get-ADGroup -Properties samaccountname, description -Filter '*' -SearchBase $QVBaseOU | sort description
 
   # Set all textlabels for this scope
-  $Menu1 = "Add user to QlikView role"
-  $Menu2 = "Remove user from QlikView role"
-  $Menu3 = "List users for QlikView role"
-  $TitleSelectGroup = "Select the the QlikView role:"
-  $TitleRemoveUser = "Select the user to be removed from QlikView role "
-  $TitleListUser = "Users for QlikView role "
-  $TitleAddUser = "Select the user to be added to QlikView role "
-  $TextAddUser = " has been added to the selected role "
-  $TextRemoveUser = " has been removed from the selected role "
+  $Menu1 = "Add user to QlikView Role"
+  $Menu2 = "Remove user from QlikView Role"
+  $Menu3 = "List users for QlikView Role"
+  $TitleSelectGroup = "Select the the QlikView Role:"
+  $TitleRemoveUser = "Select the user to be removed from QlikView Role "
+  $TitleListUser = "Users for QlikView Role "
+  $TitleAddUser = "Select the user to be added to QlikView Role "
+  $TextAddUser = " has been added to the selected Qlikview Role "
+  $TextRemoveUser = " has been removed from the selected Qlikview Role "
 }
 
 if ($scope -eq "CTX")
