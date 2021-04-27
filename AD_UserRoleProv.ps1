@@ -7,7 +7,8 @@ param ($Scope)
 .DESCRIPTION
   This script provides a tool to use AD groups to provision Qlikview Roles and Citrix Published Resources
 .PARAMETER Scope
-  Qlikview or Citrix
+  QV: Qlikview
+  CTX: Citrix
 .INPUTS
   None
 .OUTPUTS
@@ -145,7 +146,7 @@ if ($currentDir -eq $PSHOME.TrimEnd('\'))
 # Read config.ini
 $IniFilePath = $currentDir + "\config.ini"
 $IniFileExists = Test-Path $IniFilePath
-If ($IniFileExists -eq $true)
+if ($IniFileExists -eq $true)
 {
   $IniFile = Get-IniContent $IniFilePath
 }
@@ -169,9 +170,10 @@ $ADGroups=""
 # Get all AD users loaded in the beginning, so there is no delay further down
 $ADusers = get-aduser -filter *  | select name, samaccountname | sort name
 
+# If the scope is QV (for Qlikview), get everything ready
 if ($scope -eq "QV")
 {
-  # Read the OU containing AD groups for Qlikview Role Groups
+  # Read the OU containing AD groups for Qlikview Roles
   $QVBaseOU = $IniFile["AD"]["QVBaseOU"]
   if ($QVBaseOU -eq $null)
   {
@@ -190,17 +192,17 @@ if ($scope -eq "QV")
     $QVBaseOUExists = Get-ADOrganizationalUnit -Filter "distinguishedName -eq '$QVBaseOU'"
     if ($QVBaseOUExists -eq $null)
     {
-        $msgBoxInput = [System.Windows.MessageBox]::Show("OU for Qlikview Role Groups not found in AD. Check config.ini.","Error","OK","Error")
-        switch  ($msgBoxInput)
+      $msgBoxInput = [System.Windows.MessageBox]::Show("OU for Qlikview Role Groups not found in AD. Check config.ini.","Error","OK","Error")
+      switch  ($msgBoxInput)
+      {
+        "OK"
         {
-            "OK"
-            {
-            Exit 1
-            }
+          Exit 1
         }
-    }      
+      }
+    }
   }
-  
+
   # Get the groups for this Scope
   $ADGroups = Get-ADGroup -Properties samaccountname, description -Filter '*' -SearchBase $QVBaseOU | sort description
 
@@ -237,32 +239,33 @@ if ($scope -eq "CTX")
     $CTXBaseOUExists = Get-ADOrganizationalUnit -Filter "distinguishedName -eq '$CTXBaseOU'"
     if ($CTXBaseOUExists -eq $null)
     {
-        $msgBoxInput = [System.Windows.MessageBox]::Show("OU for Citrix Published Resources not found in AD. Check config.ini.","Error","OK","Error")
-        switch  ($msgBoxInput)
+      $msgBoxInput = [System.Windows.MessageBox]::Show("OU for Citrix Published Resources not found in AD. Check config.ini.","Error","OK","Error")
+      switch  ($msgBoxInput)
+      {
+        "OK"
         {
-            "OK"
-            {
-            Exit 1
-            }
+          Exit 1
         }
-    }      
+      }
+    }
   }
-  
-  # Get the groups for this Scope
-  $ADGroups = Get-ADGroup -Properties samaccountname, description -Filter '*' -SearchBase $CTXBaseOU  | sort description
 
-  # Set all textlabels for this scope
-  $Menu1 = "Add user to Citrix Published Resource"
-  $Menu2 = "Remove user from Citrix Published Resource"
-  $Menu3 = "List users for Citrix Published Resource"
-  $TitleSelectGroup = "Select the the Citrix Published Resource:"
-  $TitleRemoveUser = "Select the user to be removed from Citrix Published Resource "
-  $TitleAddUser = "Select the user to be added to Citrix Published Resource "
-  $TitleListUser = "Users for Citrix Published Resource "
-  $TextAddUser = " has been added to the selected Citrix Published Resource "
-  $TextRemoveUser = " has been removed from the Citrix Published Resource "
+    # Get the groups for this Scope
+    $ADGroups = Get-ADGroup -Properties samaccountname, description -Filter '*' -SearchBase $CTXBaseOU  | sort description
+
+    # Set all textlabels for this scope
+    $Menu1 = "Add user to Citrix Published Resource"
+    $Menu2 = "Remove user from Citrix Published Resource"
+    $Menu3 = "List users for Citrix Published Resource"
+    $TitleSelectGroup = "Select the the Citrix Published Resource:"
+    $TitleRemoveUser = "Select the user to be removed from Citrix Published Resource "
+    $TitleAddUser = "Select the user to be added to Citrix Published Resource "
+    $TitleListUser = "Users for Citrix Published Resource "
+    $TextAddUser = " has been added to the selected Citrix Published Resource "
+    $TextRemoveUser = " has been removed from the Citrix Published Resource "
 }
 
+# Create the basic menu
 $Menu = [ordered]@{
 
   1 = $Menu1
@@ -270,11 +273,13 @@ $Menu = [ordered]@{
   3 = $Menu3
   }
 
+# Get the chosen menu options and process it
 $Result = $Menu | Out-GridView -Title 'Make a  selection' -OutputMode Single
 
 Switch ($Result)
 {
   {$Result.Name -eq 1}
+  # Get through the steps to add a user to a QV/Citrix group
   {
     $SelectedGroup = $ADGroups| select description, name | Out-GridView -Title $TitleSelectGroup -OutputMode Single
     if ($SelectedGroup -eq $null)
@@ -294,7 +299,7 @@ Switch ($Result)
       {
         "OK"
         {
-          Exit 1
+          exit 0
         }
       }
     }
@@ -307,13 +312,14 @@ Switch ($Result)
       {
         "OK"
         {
-          Exit 1
+          exit 0
         }
       }
     }
   }
 
   {$Result.Name -eq 2}
+  # Get through the steps to remove a user from a QV/Citrix group
   {
     $SelectedGroup = $ADGroups| select description, name | Out-GridView -Title $TitleSelectGroup -OutputMode Single
     if ($SelectedGroup -eq $null)
@@ -331,13 +337,14 @@ Switch ($Result)
     {
       "OK"
       {
-        Exit 1
+        exit 0
       }
     }
     Remove-ADGroupMember -Identity $SelectedGroup.name -Members $SelectedUser.samaccountname -Confirm:$False
   }
 
   {$Result.Name -eq 3}
+  # Get through the steps to list users for a QV/Citrix group
   {
     $SelectedGroup = $ADGroups| select description, name | Out-GridView -Title $TitleSelectGroup -OutputMode Single
     if ($SelectedGroup -eq $null)
@@ -347,5 +354,4 @@ Switch ($Result)
     $SelectedUser = Get-ADGroupMember -Identity $SelectedGroup.name | select Name, SamAccountName | sort Name | Out-GridView -Title ($TitleListUser + $SelectedGroup.description) -OutputMode Single
     exit 0
   }
-
 }
